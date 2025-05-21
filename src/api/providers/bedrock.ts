@@ -29,6 +29,7 @@ import { convertToBedrockConverseMessages as sharedConverter } from "../transfor
 
 const BEDROCK_DEFAULT_TEMPERATURE = 0.3
 const BEDROCK_MAX_TOKENS = 4096
+const BEDROCK_DEFAULT_CONTEXT = 128_000 // PATCH: used for unknown custom ARNs
 
 /************************************************************************************
  *
@@ -184,6 +185,54 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		this.client = new BedrockRuntimeClient(clientConfig)
+	}
+
+	// PATCH: Helper to guess model info from custom modelId string if not in bedrockModels
+	private guessModelInfoFromId(modelId: string): Partial<SharedModelInfo> {
+		// Try to match Claude 3.7, 3.5, Opus, Haiku, etc.
+		const id = modelId.toLowerCase()
+
+		if (id.includes("claude-3-7")) {
+			return {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			}
+		}
+		if (id.includes("claude-3-5")) {
+			return {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			}
+		}
+		if (id.includes("claude-3-opus")) {
+			return {
+				maxTokens: 4096,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			}
+		}
+		if (id.includes("claude-3-haiku")) {
+			return {
+				maxTokens: 4096,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			}
+		}
+		// PATCH: Add more heuristics as needed here
+
+		// Default fallback
+		return {
+			maxTokens: BEDROCK_MAX_TOKENS,
+			contextWindow: BEDROCK_DEFAULT_CONTEXT,
+			supportsImages: false,
+			supportsPromptCache: false,
+		}
 	}
 
 	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
@@ -629,15 +678,23 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 				info: JSON.parse(JSON.stringify(bedrockModels[bedrockDefaultPromptRouterModelId])),
 			}
 		} else {
+			// PATCH: Use heuristics for model info, then allow overrides from ProviderSettings
+			const guessed = this.guessModelInfoFromId(modelId)
 			model = {
 				id: bedrockDefaultModelId,
-				info: JSON.parse(JSON.stringify(bedrockModels[bedrockDefaultModelId])),
+				info: {
+					...JSON.parse(JSON.stringify(bedrockModels[bedrockDefaultModelId])),
+					...guessed,
+				},
 			}
 		}
 
-		// If modelMaxTokens is explicitly set in options, override the default
+		// PATCH: Always allow user to override detected/guessed maxTokens and contextWindow
 		if (this.options.modelMaxTokens && this.options.modelMaxTokens > 0) {
 			model.info.maxTokens = this.options.modelMaxTokens
+		}
+		if (this.options.awsModelContextWindow && this.options.awsModelContextWindow > 0) {
+			model.info.contextWindow = this.options.awsModelContextWindow
 		}
 
 		return model
@@ -673,8 +730,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		modelConfig.info.maxTokens = modelConfig.info.maxTokens || BEDROCK_MAX_TOKENS
-
+		// PATCH: Don't override maxTokens/contextWindow here; handled in getModelById (and includes user overrides)
 		return modelConfig as { id: BedrockModelId | string; info: SharedModelInfo }
 	}
 
