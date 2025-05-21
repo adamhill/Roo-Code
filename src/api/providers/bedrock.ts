@@ -189,39 +189,39 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 
 	// PATCH: Helper to guess model info from custom modelId string if not in bedrockModels
 	private guessModelInfoFromId(modelId: string): Partial<SharedModelInfo> {
-		// Try to match Claude 3.7, 3.5, Opus, Haiku, etc.
-		const id = modelId.toLowerCase()
+		// Define a mapping for model ID patterns and their configurations
+		const modelConfigMap: Record<string, Partial<SharedModelInfo>> = {
+			"claude-3-7": {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			},
+			"claude-3-5": {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			},
+			"claude-3-opus": {
+				maxTokens: 4096,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			},
+			"claude-3-haiku": {
+				maxTokens: 4096,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			},
+		}
 
-		if (id.includes("claude-3-7")) {
-			return {
-				maxTokens: 8192,
-				contextWindow: 200_000,
-				supportsImages: true,
-				supportsPromptCache: true,
-			}
-		}
-		if (id.includes("claude-3-5")) {
-			return {
-				maxTokens: 8192,
-				contextWindow: 200_000,
-				supportsImages: true,
-				supportsPromptCache: true,
-			}
-		}
-		if (id.includes("claude-3-opus")) {
-			return {
-				maxTokens: 4096,
-				contextWindow: 200_000,
-				supportsImages: true,
-				supportsPromptCache: true,
-			}
-		}
-		if (id.includes("claude-3-haiku")) {
-			return {
-				maxTokens: 4096,
-				contextWindow: 200_000,
-				supportsImages: true,
-				supportsPromptCache: true,
+		// Match the model ID to a configuration
+		const id = modelId.toLowerCase()
+		for (const [pattern, config] of Object.entries(modelConfigMap)) {
+			if (id.includes(pattern)) {
+				return config
 			}
 		}
 		// PATCH: Add more heuristics as needed here
