@@ -544,7 +544,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		})
 
 		return {
-			system: systemMessage ? [{ text: systemMessage } as SystemContentBlock] : [],
+			system: cacheResult.system,
 			messages: messagesWithCache,
 		}
 	}
