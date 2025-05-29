@@ -191,6 +191,12 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 	private guessModelInfoFromId(modelId: string): Partial<SharedModelInfo> {
 		// Define a mapping for model ID patterns and their configurations
 		const modelConfigMap: Record<string, Partial<SharedModelInfo>> = {
+			"claude-4": {
+				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			},
 			"claude-3-7": {
 				maxTokens: 8192,
 				contextWindow: 200_000,
@@ -199,6 +205,12 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			},
 			"claude-3-5": {
 				maxTokens: 8192,
+				contextWindow: 200_000,
+				supportsImages: true,
+				supportsPromptCache: true,
+			},
+			"claude-4-opus": {
+				maxTokens: 4096,
 				contextWindow: 200_000,
 				supportsImages: true,
 				supportsPromptCache: true,
