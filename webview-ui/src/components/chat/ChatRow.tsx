@@ -1,12 +1,14 @@
-import React, { memo, useEffect, useMemo, useRef, useState } from "react"
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
 import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
 import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
-import { ClineApiReqInfo, ClineAskUseMcpServer, ClineMessage, ClineSayTool } from "@roo/shared/ExtensionMessage"
-import { COMMAND_OUTPUT_STRING } from "@roo/shared/combineCommandSequences"
-import { safeJsonParse } from "@roo/shared/safeJsonParse"
+import type { ClineMessage } from "@roo-code/types"
+
+import { ClineApiReqInfo, ClineAskUseMcpServer, ClineSayTool } from "@roo/ExtensionMessage"
+import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
+import { safeJsonParse } from "@roo/safeJsonParse"
 
 import { useCopyToClipboard } from "@src/utils/clipboard"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
@@ -33,7 +35,8 @@ import { Markdown } from "./Markdown"
 import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
-import { CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
+import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
+import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -41,11 +44,12 @@ interface ChatRowProps {
 	isExpanded: boolean
 	isLast: boolean
 	isStreaming: boolean
-	onToggleExpand: () => void
+	onToggleExpand: (ts: number) => void
 	onHeightChange: (isTaller: boolean) => void
 	onSuggestionClick?: (answer: string, event?: React.MouseEvent) => void
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
 
 const ChatRow = memo(
@@ -98,6 +102,11 @@ export const ChatRowContent = ({
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
 	const { copyWithFeedback } = useCopyToClipboard()
+
+	// Memoized callback to prevent re-renders caused by inline arrow functions
+	const handleToggleExpand = useCallback(() => {
+		onToggleExpand(message.ts)
+	}, [onToggleExpand, message.ts])
 
 	const [cost, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
@@ -298,7 +307,7 @@ export const ChatRowContent = ({
 							progressStatus={message.progressStatus}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -324,7 +333,7 @@ export const ChatRowContent = ({
 							progressStatus={message.progressStatus}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -346,10 +355,32 @@ export const ChatRowContent = ({
 							progressStatus={message.progressStatus}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
+			case "codebaseSearch": {
+				return (
+					<div style={headerStyle}>
+						{toolIcon("search")}
+						<span style={{ fontWeight: "bold" }}>
+							{tool.path ? (
+								<Trans
+									i18nKey="chat:codebaseSearch.wantsToSearchWithPath"
+									components={{ code: <code></code> }}
+									values={{ query: tool.query, path: tool.path }}
+								/>
+							) : (
+								<Trans
+									i18nKey="chat:codebaseSearch.wantsToSearch"
+									components={{ code: <code></code> }}
+									values={{ query: tool.query }}
+								/>
+							)}
+						</span>
+					</div>
+				)
+			}
 			case "newFileCreated":
 				return (
 					<>
@@ -363,7 +394,7 @@ export const ChatRowContent = ({
 							language={getLanguageFromPath(tool.path || "") || "log"}
 							isLoading={message.partial}
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -409,7 +440,7 @@ export const ChatRowContent = ({
 							language="markdown"
 							isLoading={message.partial}
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -429,7 +460,7 @@ export const ChatRowContent = ({
 							code={tool.content}
 							language="shell-session"
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -449,7 +480,7 @@ export const ChatRowContent = ({
 							code={tool.content}
 							language="shellsession"
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -469,7 +500,7 @@ export const ChatRowContent = ({
 							code={tool.content}
 							language="markdown"
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -499,7 +530,7 @@ export const ChatRowContent = ({
 							code={tool.content}
 							language="shellsession"
 							isExpanded={isExpanded}
-							onToggleExpand={onToggleExpand}
+							onToggleExpand={handleToggleExpand}
 						/>
 					</>
 				)
@@ -787,7 +818,7 @@ export const ChatRowContent = ({
 									MozUserSelect: "none",
 									msUserSelect: "none",
 								}}
-								onClick={onToggleExpand}>
+								onClick={handleToggleExpand}>
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
 									{title}
@@ -826,7 +857,7 @@ export const ChatRowContent = ({
 										code={safeJsonParse<any>(message.text)?.request}
 										language="markdown"
 										isExpanded={true}
-										onToggleExpand={onToggleExpand}
+										onToggleExpand={handleToggleExpand}
 									/>
 								</div>
 							)}
@@ -872,7 +903,7 @@ export const ChatRowContent = ({
 								language="diff"
 								isFeedback={true}
 								isExpanded={isExpanded}
-								onToggleExpand={onToggleExpand}
+								onToggleExpand={handleToggleExpand}
 							/>
 						</div>
 					)
@@ -919,7 +950,7 @@ export const ChatRowContent = ({
 									code={message.text}
 									language="json"
 									isExpanded={true}
-									onToggleExpand={onToggleExpand}
+									onToggleExpand={handleToggleExpand}
 								/>
 							</div>
 						</>
@@ -938,6 +969,38 @@ export const ChatRowContent = ({
 						return <CondensingContextRow />
 					}
 					return message.contextCondense ? <ContextCondenseRow {...message.contextCondense} /> : null
+				case "condense_context_error":
+					return <CondenseContextErrorRow errorText={message.text} />
+				case "codebase_search_result":
+					let parsed: {
+						content: {
+							query: string
+							results: Array<{
+								filePath: string
+								score: number
+								startLine: number
+								endLine: number
+								codeChunk: string
+							}>
+						}
+					} | null = null
+
+					try {
+						if (message.text) {
+							parsed = JSON.parse(message.text)
+						}
+					} catch (error) {
+						console.error("Failed to parse codebaseSearch content:", error)
+					}
+
+					if (parsed && !parsed?.content) {
+						console.error("Invalid codebaseSearch content structure:", parsed.content)
+						return <div>Error displaying search results.</div>
+					}
+
+					const { query = "", results = [] } = parsed?.content || {}
+
+					return <CodebaseSearchResultsDisplay query={query} results={results} />
 				default:
 					return (
 						<>
@@ -1049,7 +1112,7 @@ export const ChatRowContent = ({
 													code={useMcpServer.arguments}
 													language="json"
 													isExpanded={true}
-													onToggleExpand={onToggleExpand}
+													onToggleExpand={handleToggleExpand}
 												/>
 											</div>
 										)}

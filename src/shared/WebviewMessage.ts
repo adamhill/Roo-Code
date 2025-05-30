@@ -1,7 +1,8 @@
 import { z } from "zod"
 
-import { ProviderSettings } from "./api"
-import { Mode, PromptComponent, ModeConfig } from "./modes"
+import type { ProviderSettings, PromptComponent, ModeConfig } from "@roo-code/types"
+
+import { Mode } from "./modes"
 
 export type ClineAskResponse = "yesButtonClicked" | "noButtonClicked" | "messageResponse"
 
@@ -59,7 +60,10 @@ export interface WebviewMessage {
 		| "alwaysAllowModeSwitch"
 		| "allowedMaxRequests"
 		| "alwaysAllowSubtasks"
+		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
+		| "condensingApiConfigId"
+		| "updateCondensingPrompt"
 		| "playSound"
 		| "playTts"
 		| "stopTts"
@@ -132,7 +136,16 @@ export interface WebviewMessage {
 		| "searchFiles"
 		| "toggleApiConfigPin"
 		| "setHistoryPreviewCollapsed"
+		| "accountButtonClicked"
+		| "rooCloudSignIn"
+		| "rooCloudSignOut"
 		| "condenseTaskContextRequest"
+		| "requestIndexingStatus"
+		| "startIndexing"
+		| "clearIndexData"
+		| "indexingStatusUpdate"
+		| "indexCleared"
+		| "codebaseIndexConfig"
 	text?: string
 	disabled?: boolean
 	askResponse?: ClineAskResponse
@@ -181,4 +194,18 @@ export const checkoutRestorePayloadSchema = z.object({
 
 export type CheckpointRestorePayload = z.infer<typeof checkoutRestorePayloadSchema>
 
-export type WebViewMessagePayload = CheckpointDiffPayload | CheckpointRestorePayload
+export interface IndexingStatusPayload {
+	state: "Standby" | "Indexing" | "Indexed" | "Error"
+	message: string
+}
+
+export interface IndexClearedPayload {
+	success: boolean
+	error?: string
+}
+
+export type WebViewMessagePayload =
+	| CheckpointDiffPayload
+	| CheckpointRestorePayload
+	| IndexingStatusPayload
+	| IndexClearedPayload
