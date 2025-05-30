@@ -191,9 +191,9 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	// PATCH: Helper to guess model info from custom modelId string if not in bedrockModels
-	private guessModelInfoFromId(modelId: string): Partial<SharedModelInfo> {
+	private guessModelInfoFromId(modelId: string): Partial<ModelInfo> {
 		// Define a mapping for model ID patterns and their configurations
-		const modelConfigMap: Record<string, Partial<SharedModelInfo>> = {
+		const modelConfigMap: Record<string, Partial<ModelInfo>> = {
 			"claude-4": {
 				maxTokens: 8192,
 				contextWindow: 200_000,
@@ -751,7 +751,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		// PATCH: Don't override maxTokens/contextWindow here; handled in getModelById (and includes user overrides)
-		return modelConfig as { id: BedrockModelId | string; info: SharedModelInfo }
+		return modelConfig as { id: BedrockModelId | string; info: ModelInfo }
 	}
 
 	/************************************************************************************
