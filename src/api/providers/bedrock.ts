@@ -19,6 +19,7 @@ import {
 	bedrockDefaultPromptRouterModelId,
 	BEDROCK_DEFAULT_TEMPERATURE,
 	BEDROCK_MAX_TOKENS,
+	BEDROCK_DEFAULT_CONTEXT,
 	BEDROCK_REGION_INFO,
 } from "@roo-code/types"
 
@@ -29,10 +30,6 @@ import { MultiPointStrategy } from "../transform/cache-strategy/multi-point-stra
 import { ModelInfo as CacheModelInfo } from "../transform/cache-strategy/types"
 import { convertToBedrockConverseMessages as sharedConverter } from "../transform/bedrock-converse-format"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
-
-const BEDROCK_DEFAULT_TEMPERATURE = 0.3
-const BEDROCK_MAX_TOKENS = 4096
-const BEDROCK_DEFAULT_CONTEXT = 128_000 // PATCH: used for unknown custom ARNs
 
 /************************************************************************************
  *
@@ -196,7 +193,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		this.client = new BedrockRuntimeClient(clientConfig)
 	}
 
-	// PATCH: Helper to guess model info from custom modelId string if not in bedrockModels
+	// Helper to guess model info from custom modelId string if not in bedrockModels
 	private guessModelInfoFromId(modelId: string): Partial<ModelInfo> {
 		// Define a mapping for model ID patterns and their configurations
 		const modelConfigMap: Record<string, Partial<ModelInfo>> = {
@@ -245,7 +242,6 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 				return config
 			}
 		}
-		// PATCH: Add more heuristics as needed here
 
 		// Default fallback
 		return {
@@ -704,7 +700,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 				info: JSON.parse(JSON.stringify(bedrockModels[bedrockDefaultPromptRouterModelId])),
 			}
 		} else {
-			// PATCH: Use heuristics for model info, then allow overrides from ProviderSettings
+			// Use heuristics for model info, then allow overrides from ProviderSettings
 			const guessed = this.guessModelInfoFromId(modelId)
 			model = {
 				id: bedrockDefaultModelId,
@@ -715,7 +711,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		// PATCH: Always allow user to override detected/guessed maxTokens and contextWindow
+		// Always allow user to override detected/guessed maxTokens and contextWindow
 		if (this.options.modelMaxTokens && this.options.modelMaxTokens > 0) {
 			model.info.maxTokens = this.options.modelMaxTokens
 		}
@@ -756,7 +752,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		// PATCH: Don't override maxTokens/contextWindow here; handled in getModelById (and includes user overrides)
+		// Don't override maxTokens/contextWindow here; handled in getModelById (and includes user overrides)
 		return modelConfig as { id: BedrockModelId | string; info: ModelInfo }
 	}
 
