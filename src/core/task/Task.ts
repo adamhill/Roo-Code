@@ -320,7 +320,8 @@ export class Task extends EventEmitter<ClineEvents> {
 
 	private async addToClineMessages(message: ClineMessage) {
 		this.clineMessages.push(message)
-		await this.providerRef.deref()?.postStateToWebview()
+		const provider = this.providerRef.deref()
+		await provider?.postStateToWebview()
 		this.emit("message", { action: "created", message })
 		await this.saveClineMessages()
 
@@ -340,7 +341,8 @@ export class Task extends EventEmitter<ClineEvents> {
 	}
 
 	private async updateClineMessage(partialMessage: ClineMessage) {
-		await this.providerRef.deref()?.postMessageToWebview({ type: "partialMessage", partialMessage })
+		const provider = this.providerRef.deref()
+		await provider?.postMessageToWebview({ type: "partialMessage", partialMessage })
 		this.emit("message", { action: "updated", message: partialMessage })
 
 		const shouldCaptureMessage = partialMessage.partial !== true && CloudService.isEnabled()
@@ -808,7 +810,9 @@ export class Task extends EventEmitter<ClineEvents> {
 			if (Array.isArray(message.content)) {
 				const newContent = message.content.map((block) => {
 					if (block.type === "tool_use") {
-						// it's important we convert to the new tool schema format so the model doesn't get confused about how to invoke tools
+						// It's important we convert to the new tool schema
+						// format so the model doesn't get confused about how to
+						// invoke tools.
 						const inputAsXml = Object.entries(block.input as Record<string, string>)
 							.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
 							.join("\n")
@@ -1316,7 +1320,7 @@ export class Task extends EventEmitter<ClineEvents> {
 						// `userContent` has a tool rejection, so interrupt the
 						// assistant's response to present the user's feedback.
 						assistantMessage += "\n\n[Response interrupted by user feedback]"
-						// Instead of setting this premptively, we allow the
+						// Instead of setting this preemptively, we allow the
 						// present iterator to finish and set
 						// userMessageContentReady when its ready.
 						// this.userMessageContentReady = true
@@ -1503,6 +1507,7 @@ export class Task extends EventEmitter<ClineEvents> {
 		const rooIgnoreInstructions = this.rooIgnoreController?.getInstructions()
 
 		const state = await this.providerRef.deref()?.getState()
+
 		const {
 			browserViewportSize,
 			mode,
@@ -1513,6 +1518,7 @@ export class Task extends EventEmitter<ClineEvents> {
 			enableMcpServerCreation,
 			browserToolEnabled,
 			language,
+			maxConcurrentFileReads,
 			maxReadFileLine,
 		} = state ?? {}
 
@@ -1540,6 +1546,9 @@ export class Task extends EventEmitter<ClineEvents> {
 				language,
 				rooIgnoreInstructions,
 				maxReadFileLine !== -1,
+				{
+					maxConcurrentFileReads,
+				},
 			)
 		})()
 	}
